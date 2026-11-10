@@ -1,291 +1,390 @@
-
 const API_BASE = "";
 
-const scanButton = document.getElementById("scan-button");
-const apiStatus = document.getElementById("api-status");
-const sidebarStatus = document.getElementById("sidebar-status");
-const sidebarDot = document.getElementById("sidebar-status-dot");
-const searchInput = document.getElementById("search-input");
-const severityFilter = document.getElementById("severity-filter");
-const anomalyTable = document.getElementById("anomaly-table");
+const elements = {
+  apiStatus: document.getElementById("api-status"),
+  sidebarStatus: document.getElementById("sidebar-status"),
+  scanButton: document.getElementById("scan-button"),
+  currentDate: document.getElementById("current-date"),
+  lastUpdated: document.getElementById("last-updated"),
+
+  total: document.getElementById("total-anomalies"),
+  critical: document.getElementById("critical-count"),
+  high: document.getElementById("high-count"),
+  medium: document.getElementById("medium-count"),
+  low: document.getElementById("low-count"),
+
+  severityChart: document.getElementById("severity-chart"),
+  typeChart: document.getElementById("type-chart"),
+
+  search: document.getElementById("search-input"),
+  severityFilter: document.getElementById("severity-filter"),
+  anomalyTable: document.getElementById("anomaly-table"),
+  resultCount: document.getElementById("result-count"),
+  footerCount: document.getElementById("table-footer-count"),
+  toast: document.getElementById("toast")
+};
 
 let allAnomalies = [];
 
+const severityColors = {
+  CRITICAL: "#e45d6b",
+  HIGH: "#ee994e",
+  MEDIUM: "#d5aa3d",
+  LOW: "#36a982"
+};
+
 function showToast(message) {
-    const toast = document.getElementById("toast");
-    toast.textContent = message;
-    toast.classList.add("show");
+  elements.toast.textContent = message;
+  elements.toast.classList.add("show");
 
-    setTimeout(() => {
-        toast.classList.remove("show");
-    }, 3500);
+  setTimeout(() => {
+    elements.toast.classList.remove("show");
+  }, 3000);
 }
 
-function setApiStatus(online) {
-    apiStatus.textContent = online ? "● API Connected" : "● API Offline";
-    sidebarStatus.textContent = online ? "System online" : "System offline";
+function setApiStatus(connected) {
+  if (connected) {
+    elements.apiStatus.className = "connection-pill";
+    elements.apiStatus.innerHTML =
+      '<span class="live-dot"></span> API Connected';
 
-    sidebarDot.className = online
-        ? "status-dot online"
-        : "status-dot offline";
+    elements.sidebarStatus.textContent = "Connected successfully";
+  } else {
+    elements.apiStatus.className = "connection-pill offline";
+    elements.apiStatus.innerHTML =
+      '<span class="live-dot"></span> API Offline';
+
+    elements.sidebarStatus.textContent = "Backend unavailable";
+  }
 }
 
-function updateStats(data) {
-    document.getElementById("total-anomalies").textContent =
-        data.total_anomalies;
+function formatDate(value) {
+  if (!value) return "—";
 
-    document.getElementById("critical-count").textContent =
-        data.critical_count;
+  const date = new Date(value);
 
-    document.getElementById("high-count").textContent =
-        data.high_count;
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
 
-    document.getElementById("medium-count").textContent =
-        data.medium_count;
-
-    document.getElementById("low-count").textContent =
-        data.low_count;
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
-function renderSeverityChart(data) {
-    const container = document.getElementById("severity-chart");
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    };
 
-    const levels = [
-        { name: "Critical", value: data.critical_count, color: "#e64f60" },
-        { name: "High", value: data.high_count, color: "#ed963e" },
-        { name: "Medium", value: data.medium_count, color: "#e4bd45" },
-        { name: "Low", value: data.low_count, color: "#38aa86" }
-    ];
-
-    const maximum = Math.max(data.total_anomalies, 1);
-
-    container.innerHTML = "";
-
-    levels.forEach(level => {
-        const row = document.createElement("div");
-        row.className = "severity-row";
-
-        const label = document.createElement("span");
-        label.textContent = level.name;
-
-        const track = document.createElement("div");
-        track.className = "progress-track";
-
-        const fill = document.createElement("div");
-        fill.className = "progress-fill";
-        fill.style.width = `${(level.value / maximum) * 100}%`;
-        fill.style.background = level.color;
-
-        track.appendChild(fill);
-
-        const count = document.createElement("strong");
-        count.textContent = level.value;
-
-        row.append(label, track, count);
-        container.appendChild(row);
-    });
+    return entities[character];
+  });
 }
 
-function renderTypeChart(byType) {
-    const container = document.getElementById("type-chart");
-    container.innerHTML = "";
+function getSeverityCounts(anomalies) {
+  const counts = {
+    CRITICAL: 0,
+    HIGH: 0,
+    MEDIUM: 0,
+    LOW: 0
+  };
 
-    const entries = Object.entries(byType);
-    const maximum = Math.max(...entries.map(item => item[1]), 1);
+  anomalies.forEach(anomaly => {
+    const severity = String(anomaly.severity || "").toUpperCase();
 
-    if (entries.length === 0) {
-        container.textContent = "No anomalies detected.";
-        return;
+    if (Object.prototype.hasOwnProperty.call(counts, severity)) {
+      counts[severity]++;
     }
+  });
 
-    entries.forEach(([type, count]) => {
-        const row = document.createElement("div");
-        row.className = "type-row";
-
-        const label = document.createElement("div");
-        label.className = "type-label";
-
-        const name = document.createElement("span");
-        name.textContent = type.replaceAll("_", " ");
-
-        const value = document.createElement("strong");
-        value.textContent = count;
-
-        label.append(name, value);
-
-        const track = document.createElement("div");
-        track.className = "progress-track";
-
-        const fill = document.createElement("div");
-        fill.className = "progress-fill";
-        fill.style.width = `${(count / maximum) * 100}%`;
-        fill.style.background = "#526cf0";
-
-        track.appendChild(fill);
-        row.append(label, track);
-        container.appendChild(row);
-    });
+  return counts;
 }
 
-function renderAnomalyTable(anomalies) {
-    anomalyTable.innerHTML = "";
+function updateStatistics(anomalies) {
+  const counts = getSeverityCounts(anomalies);
 
-    if (anomalies.length === 0) {
-        const row = document.createElement("tr");
-        const cell = document.createElement("td");
+  elements.total.textContent = anomalies.length;
+  elements.critical.textContent = counts.CRITICAL;
+  elements.high.textContent = counts.HIGH;
+  elements.medium.textContent = counts.MEDIUM;
+  elements.low.textContent = counts.LOW;
+}
 
-        cell.colSpan = 6;
-        cell.className = "empty-state";
-        cell.textContent = "No matching anomalies found.";
+function renderSeverityChart(anomalies) {
+  const counts = getSeverityCounts(anomalies);
+  const total = anomalies.length;
 
-        row.appendChild(cell);
-        anomalyTable.appendChild(row);
+  const order = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
+
+  elements.severityChart.innerHTML = order.map(severity => {
+    const count = counts[severity];
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    const color = severityColors[severity];
+
+    return `
+      <div class="severity-row">
+        <span class="severity-name">${severity}</span>
+        <div class="bar-track">
+          <div
+            class="bar-fill"
+            style="width:${percentage}%; background:${color};"
+          ></div>
+        </div>
+        <span class="severity-count">${count}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderCategoryChart(anomalies) {
+  const categories = {};
+
+  anomalies.forEach(anomaly => {
+    const type = anomaly.anomaly_type || "OTHER";
+    categories[type] = (categories[type] || 0) + 1;
+  });
+
+  const entries = Object.entries(categories)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (entries.length === 0) {
+    elements.typeChart.innerHTML =
+      '<div class="chart-empty">No anomaly categories detected</div>';
+    return;
+  }
+
+  const maximum = Math.max(...entries.map(item => item[1]));
+
+  elements.typeChart.innerHTML = entries.map(([type, count]) => {
+    const percentage = maximum > 0 ? (count / maximum) * 100 : 0;
+
+    return `
+      <div class="category-row">
+        <span class="category-name">${escapeHtml(type.replaceAll("_", " "))}</span>
+        <div class="bar-track">
+          <div
+            class="bar-fill"
+            style="width:${percentage}%; background:#746be0;"
+          ></div>
+        </div>
+        <span class="category-count">${count}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function getRecordReference(anomaly) {
+  const records = anomaly.records || {};
+
+  const preferredKeys = [
+    "seller_id",
+    "listing_id",
+    "payout_id",
+    "payout_line_id",
+    "dispute_id",
+    "order_line_id",
+    "fulfillment_id"
+  ];
+
+  for (const key of preferredKeys) {
+    if (records[key]) {
+      return records[key];
     }
+  }
 
-    anomalies.forEach(anomaly => {
-        const row = document.createElement("tr");
+  const values = Object.values(records);
 
-        const seller = anomaly.records.seller_id || "N/A";
-        const record = anomaly.records.listing_id
-            || anomaly.records.payout_id
-            || anomaly.records.dispute_id
-            || anomaly.records.payout_line_id
-            || anomaly.records.order_line_id
-            || "N/A";
-
-        const values = [
-            anomaly.anomaly_id,
-            anomaly.anomaly_type.replaceAll("_", " "),
-            anomaly.severity,
-            `${seller} / ${record}`,
-            anomaly.recommendation,
-            new Date(anomaly.detected_at).toLocaleString()
-        ];
-
-        values.forEach((value, index) => {
-            const cell = document.createElement("td");
-
-            if (index === 2) {
-                const badge = document.createElement("span");
-                badge.className = `severity-badge severity-${anomaly.severity}`;
-                badge.textContent = anomaly.severity;
-                cell.appendChild(badge);
-            } else {
-                cell.textContent = value;
-            }
-
-            if (index === 4) {
-                cell.className = "recommendation";
-            }
-
-            row.appendChild(cell);
-        });
-
-        anomalyTable.appendChild(row);
-    });
-
-    document.getElementById("result-count").textContent =
-        `Showing ${anomalies.length} of ${allAnomalies.length} anomalies`;
+  return values.length ? values[0] : "—";
 }
 
-function applyFilters() {
-    const query = searchInput.value.toLowerCase().trim();
-    const severity = severityFilter.value;
+function renderTable(anomalies) {
+  const searchTerm = elements.search.value.trim().toLowerCase();
+  const selectedSeverity = elements.severityFilter.value;
 
-    const filtered = allAnomalies.filter(anomaly => {
-        const searchable = [
-            anomaly.anomaly_id,
-            anomaly.anomaly_type,
-            anomaly.title,
-            anomaly.description,
-            anomaly.recommendation,
-            JSON.stringify(anomaly.records)
-        ].join(" ").toLowerCase();
+  const filtered = anomalies.filter(anomaly => {
+    const severity = String(anomaly.severity || "").toUpperCase();
 
-        const matchesSearch = searchable.includes(query);
-        const matchesSeverity =
-            severity === "ALL" || anomaly.severity === severity;
+    const searchableText = [
+      anomaly.anomaly_id,
+      anomaly.anomaly_type,
+      anomaly.title,
+      anomaly.description,
+      JSON.stringify(anomaly.records || {})
+    ].join(" ").toLowerCase();
 
-        return matchesSearch && matchesSeverity;
-    });
+    const matchesSearch = searchableText.includes(searchTerm);
 
-    renderAnomalyTable(filtered);
+    const matchesSeverity =
+      selectedSeverity === "ALL" || severity === selectedSeverity;
+
+    return matchesSearch && matchesSeverity;
+  });
+
+  elements.resultCount.textContent = `${filtered.length} records`;
+  elements.footerCount.textContent = `${filtered.length} results`;
+
+  if (filtered.length === 0) {
+    elements.anomalyTable.innerHTML = `
+      <tr>
+        <td colspan="5" class="table-message">
+          No matching anomalies found.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  elements.anomalyTable.innerHTML = filtered.map(anomaly => {
+    const severity = String(anomaly.severity || "LOW").toLowerCase();
+    const reference = getRecordReference(anomaly);
+
+    return `
+      <tr>
+        <td>
+          <div class="anomaly-title">
+            ${escapeHtml(anomaly.title || anomaly.anomaly_type)}
+          </div>
+          <div class="anomaly-id">
+            ${escapeHtml(anomaly.anomaly_id || "—")}
+          </div>
+        </td>
+
+        <td>
+          <span class="severity-badge ${escapeHtml(severity)}">
+            ${escapeHtml(severity.toUpperCase())}
+          </span>
+        </td>
+
+        <td>${escapeHtml(anomaly.description || "—")}</td>
+
+        <td>
+          <span class="record-reference">
+            ${escapeHtml(reference)}
+          </span>
+        </td>
+
+        <td>${escapeHtml(formatDate(anomaly.detected_at))}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderDashboard(anomalies) {
+  allAnomalies = Array.isArray(anomalies) ? anomalies : [];
+
+  updateStatistics(allAnomalies);
+  renderSeverityChart(allAnomalies);
+  renderCategoryChart(allAnomalies);
+  renderTable(allAnomalies);
+
+  elements.lastUpdated.textContent =
+    `Last scanned: ${new Date().toLocaleTimeString("en-IN")}`;
 }
 
 async function checkHealth() {
-    try {
-        const response = await fetch(`${API_BASE}/health`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        setApiStatus(true);
-    } catch (error) {
-        setApiStatus(false);
-        console.error("Health check failed:", error);
-    }
-}
-
-async function loadSummary() {
-    const response = await fetch(`${API_BASE}/api/v1/anomalies/summary`);
+  try {
+    const response = await fetch(`${API_BASE}/health`);
 
     if (!response.ok) {
-        throw new Error(`Summary request failed: HTTP ${response.status}`);
+      throw new Error("Health check failed");
     }
 
-    return await response.json();
+    setApiStatus(true);
+    return true;
+  } catch (error) {
+    setApiStatus(false);
+    return false;
+  }
 }
 
-async function runScan() {
-    scanButton.disabled = true;
-    scanButton.textContent = "Scanning...";
+async function runRiskScan(showMessage = true) {
+  elements.scanButton.disabled = true;
+  elements.scanButton.innerHTML =
+    '<span class="scan-icon">↻</span><span>Scanning...</span>';
 
-    try {
-        const response = await fetch(
-            `${API_BASE}/api/v1/anomalies/scan`,
-            { method: "POST" }
-        );
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || `HTTP ${response.status}`);
+  try {
+    const response = await fetch(
+      `${API_BASE}/api/v1/anomalies/scan`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
         }
+      }
+    );
 
-        const data = await response.json();
-
-        allAnomalies = data.anomalies;
-
-        updateStats(data);
-        renderSeverityChart(data);
-
-        const summary = await loadSummary();
-        renderTypeChart(summary.by_type);
-
-        applyFilters();
-
-        document.getElementById("last-updated").textContent =
-            `Last scanned: ${new Date().toLocaleString()}`;
-
-        setApiStatus(true);
-        showToast(`Scan completed: ${data.total_anomalies} anomalies found.`);
-    } catch (error) {
-        console.error("Scan failed:", error);
-        setApiStatus(false);
-        showToast(`Scan failed: ${error.message}`);
-    } finally {
-        scanButton.disabled = false;
-        scanButton.innerHTML = "<span>↻</span> Scan Now";
+    if (!response.ok) {
+      throw new Error(`Scan failed with status ${response.status}`);
     }
+
+    const data = await response.json();
+
+    renderDashboard(data.anomalies || []);
+    setApiStatus(true);
+
+    if (showMessage) {
+      showToast(`Risk scan completed: ${data.total_anomalies} anomalies found.`);
+    }
+
+  } catch (error) {
+    console.error("Risk scan error:", error);
+    setApiStatus(false);
+
+    showToast("Unable to run risk scan. Check your backend server.");
+
+  } finally {
+    elements.scanButton.disabled = false;
+    elements.scanButton.innerHTML =
+      '<span class="scan-icon">↻</span><span>Run risk scan</span>';
+  }
 }
 
-scanButton.addEventListener("click", runScan);
-searchInput.addEventListener("input", applyFilters);
-severityFilter.addEventListener("change", applyFilters);
+async function loadDashboard() {
+  const connected = await checkHealth();
 
-async function initializeDashboard() {
-    await checkHealth();
-    await runScan();
+  if (connected) {
+    await runRiskScan(false);
+  } else {
+    elements.anomalyTable.innerHTML = `
+      <tr>
+        <td colspan="5" class="table-message">
+          Backend connection unavailable. Start the FastAPI server and refresh.
+        </td>
+      </tr>
+    `;
+  }
 }
 
-initializeDashboard();
+/* EVENT LISTENERS */
+
+elements.scanButton.addEventListener("click", () => {
+  runRiskScan(true);
+});
+
+elements.search.addEventListener("input", () => {
+  renderTable(allAnomalies);
+});
+
+elements.severityFilter.addEventListener("change", () => {
+  renderTable(allAnomalies);
+});
+
+/* INITIALIZE */
+
+elements.currentDate.textContent =
+  new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
+
+loadDashboard();

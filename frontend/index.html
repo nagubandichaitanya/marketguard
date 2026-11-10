@@ -1,179 +1,273 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MarketGuard | Risk Intelligence Dashboard</title>
-    <link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketGuard | Risk Intelligence</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
+
 <body>
-    <div class="app-container">
+  <div class="app-shell">
 
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-icon">M</div>
-                <div>
-                    <h2>MarketGuard</h2>
-                    <span>RISK INTELLIGENCE</span>
-                </div>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div>
+          <h2>MarketGuard</h2>
+          <span>RISK INTELLIGENCE</span>
+        </div>
+      </div>
+
+      <div class="workspace-label">WORKSPACE</div>
+
+      <nav class="navigation">
+        <a href="#dashboard" class="nav-item active">
+          <span class="nav-icon">▦</span>
+          <span>Overview</span>
+        </a>
+        <a href="#investigations" class="nav-item">
+          <span class="nav-icon">⌕</span>
+          <span>Anomaly detection</span>
+        </a>
+        <a href="#insights" class="nav-item">
+          <span class="nav-icon">◷</span>
+          <span>Risk analytics</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="system-card">
+          <div class="system-heading">
+            <span class="status-dot"></span>
+            System status
+          </div>
+          <p id="sidebar-status">Checking connection...</p>
+          <span class="system-caption">MarketGuard monitoring</span>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="avatar">MG</div>
+          <div>
+            <strong>Admin workspace</strong>
+            <span>Marketplace operations</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content" id="dashboard">
+
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span>Workspace</span>
+          <span class="breadcrumb-separator">/</span>
+          <strong>Overview</strong>
+        </div>
+
+        <div class="topbar-right">
+          <span class="connection-pill" id="api-status">
+            <span class="live-dot"></span>
+            Checking API
+          </span>
+          <div class="topbar-date" id="current-date"></div>
+        </div>
+      </header>
+
+      <section class="page-heading">
+        <div>
+          <div class="eyebrow">MARKETPLACE OPERATIONS</div>
+          <h1>Risk intelligence overview</h1>
+          <p>Monitor seller compliance, payout integrity and operational anomalies.</p>
+        </div>
+
+        <button class="scan-button" id="scan-button">
+          <span class="scan-icon">↻</span>
+          <span>Run risk scan</span>
+        </button>
+      </section>
+
+      <section class="monitor-banner">
+        <div class="monitor-icon">✦</div>
+        <div class="monitor-copy">
+          <strong>Continuous risk monitoring</strong>
+          <span>Review detected exceptions and investigate unusual marketplace activity.</span>
+        </div>
+        <div class="monitor-right">
+          <span class="monitor-dot"></span>
+          Monitoring active
+        </div>
+      </section>
+
+      <section class="section-heading">
+        <div>
+          <h2>Risk summary</h2>
+          <p>Current anomaly overview across marketplace operations</p>
+        </div>
+        <span class="updated-label" id="last-updated">Waiting for scan</span>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card total-card">
+          <div class="stat-top">
+            <span class="stat-label">Total anomalies</span>
+            <span class="stat-icon purple">◈</span>
+          </div>
+          <div class="stat-value" id="total-anomalies">—</div>
+          <div class="stat-foot">
+            <span class="stat-foot-dot purple-bg"></span>
+            Detected exceptions
+          </div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span class="stat-label">Critical risks</span>
+            <span class="stat-icon red">!</span>
+          </div>
+          <div class="stat-value" id="critical-count">—</div>
+          <div class="stat-foot">
+            <span class="stat-foot-dot red-bg"></span>
+            Requires immediate review
+          </div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span class="stat-label">High risks</span>
+            <span class="stat-icon orange">↗</span>
+          </div>
+          <div class="stat-value" id="high-count">—</div>
+          <div class="stat-foot">
+            <span class="stat-foot-dot orange-bg"></span>
+            Priority investigation
+          </div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span class="stat-label">Medium risks</span>
+            <span class="stat-icon yellow">◉</span>
+          </div>
+          <div class="stat-value" id="medium-count">—</div>
+          <div class="stat-foot">
+            <span class="stat-foot-dot yellow-bg"></span>
+            Needs attention
+          </div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-top">
+            <span class="stat-label">Low risks</span>
+            <span class="stat-icon green">✓</span>
+          </div>
+          <div class="stat-value" id="low-count">—</div>
+          <div class="stat-foot">
+            <span class="stat-foot-dot green-bg"></span>
+            Informational
+          </div>
+        </article>
+      </section>
+
+      <section class="analytics-grid" id="insights">
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Severity distribution</h3>
+              <p>Detected anomalies by risk level</p>
             </div>
+            <span class="panel-menu">•••</span>
+          </div>
 
-            <nav>
-                <p class="nav-heading">WORKSPACE</p>
-                <a class="nav-link active" href="#dashboard">
-                    <span>▦</span> Dashboard
-                </a>
-                <a class="nav-link" href="#anomalies">
-                    <span>⚠</span> Anomaly Detection
-                </a>
-            </nav>
+          <div class="severity-chart" id="severity-chart">
+            <div class="chart-empty">Loading severity data...</div>
+          </div>
+        </article>
 
-            <div class="sidebar-bottom">
-                <div class="system-indicator">
-                    <span class="status-dot" id="sidebar-status-dot"></span>
-                    <span id="sidebar-status">Checking API...</span>
-                </div>
-                <small>MarketGuard v1.0</small>
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3>Anomaly categories</h3>
+              <p>Distribution across detection rules</p>
             </div>
-        </aside>
+            <span class="panel-menu">•••</span>
+          </div>
 
-        <main class="main-content" id="dashboard">
+          <div class="category-chart" id="type-chart">
+            <div class="chart-empty">Loading category data...</div>
+          </div>
+        </article>
+      </section>
 
-            <header class="topbar">
-                <div>
-                    <p class="eyebrow">MARKETPLACE OPERATIONS</p>
-                    <h1>Risk Intelligence Dashboard</h1>
-                    <p class="subtitle">Monitor seller compliance, payouts and operational anomalies.</p>
-                </div>
-                <div class="top-actions">
-                    <span class="connection" id="api-status">Checking connection...</span>
-                    <button id="scan-button" class="primary-button">
-                        <span>↻</span> Scan Now
-                    </button>
-                </div>
-            </header>
+      <section class="panel investigation-panel" id="investigations">
+        <div class="investigation-heading">
+          <div>
+            <h2>Investigation queue</h2>
+            <p>Review and investigate detected marketplace exceptions.</p>
+          </div>
+          <span class="queue-count" id="result-count">0 records</span>
+        </div>
 
-            <section class="scan-info">
-                <div>
-                    <strong>Live anomaly monitoring</strong>
-                    <p>Detection results are retrieved directly from the MarketGuard API.</p>
-                </div>
-                <span id="last-updated">Not scanned yet</span>
-            </section>
+        <div class="table-toolbar">
+          <div class="search-box">
+            <span>⌕</span>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search anomaly, seller or record ID..."
+            >
+          </div>
 
-            <section class="stats-grid">
-                <article class="stat-card">
-                    <div class="stat-label">TOTAL ANOMALIES</div>
-                    <div class="stat-value" id="total-anomalies">—</div>
-                    <div class="stat-note">Detected records</div>
-                </article>
+          <select id="severity-filter" class="filter-select">
+            <option value="ALL">All severity levels</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
 
-                <article class="stat-card critical-card">
-                    <div class="stat-label">CRITICAL</div>
-                    <div class="stat-value" id="critical-count">—</div>
-                    <div class="stat-note">Immediate attention</div>
-                </article>
+        <div class="table-wrapper">
+          <table class="anomaly-table">
+            <thead>
+              <tr>
+                <th>ANOMALY</th>
+                <th>RISK LEVEL</th>
+                <th>DESCRIPTION</th>
+                <th>RECORD REFERENCE</th>
+                <th>DETECTED</th>
+              </tr>
+            </thead>
+            <tbody id="anomaly-table">
+              <tr>
+                <td colspan="5" class="table-message">Loading anomaly records...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-                <article class="stat-card high-card">
-                    <div class="stat-label">HIGH</div>
-                    <div class="stat-value" id="high-count">—</div>
-                    <div class="stat-note">High-priority risks</div>
-                </article>
+        <div class="table-footer">
+          <span>Showing detected records from the latest scan</span>
+          <span id="table-footer-count">0 results</span>
+        </div>
+      </section>
 
-                <article class="stat-card medium-card">
-                    <div class="stat-label">MEDIUM</div>
-                    <div class="stat-value" id="medium-count">—</div>
-                    <div class="stat-note">Review required</div>
-                </article>
+      <footer class="page-footer">
+        <span>MarketGuard Risk Intelligence</span>
+        <span>Marketplace compliance & payout monitoring</span>
+      </footer>
 
-                <article class="stat-card low-card">
-                    <div class="stat-label">LOW</div>
-                    <div class="stat-value" id="low-count">—</div>
-                    <div class="stat-note">Monitor findings</div>
-                </article>
-            </section>
+    </main>
+  </div>
 
-            <section class="insights-grid">
-                <article class="panel">
-                    <div class="panel-header">
-                        <div>
-                            <h2>Severity Overview</h2>
-                            <p>Distribution of detected risk levels</p>
-                        </div>
-                    </div>
-                    <div id="severity-chart" class="severity-chart">
-                        <p class="empty-state">Loading severity data...</p>
-                    </div>
-                </article>
+  <div class="toast" id="toast"></div>
 
-                <article class="panel">
-                    <div class="panel-header">
-                        <div>
-                            <h2>Anomaly Categories</h2>
-                            <p>Detected anomalies by rule</p>
-                        </div>
-                    </div>
-                    <div id="type-chart" class="type-chart">
-                        <p class="empty-state">Loading category data...</p>
-                    </div>
-                </article>
-            </section>
-
-            <section class="panel anomaly-panel" id="anomalies">
-                <div class="panel-header anomaly-header">
-                    <div>
-                        <h2>Detected Anomalies</h2>
-                        <p>Investigate suspicious marketplace activities</p>
-                    </div>
-                    <div class="filters">
-                        <input
-                            type="search"
-                            id="search-input"
-                            placeholder="Search seller or anomaly..."
-                        >
-                        <select id="severity-filter">
-                            <option value="ALL">All severities</option>
-                            <option value="CRITICAL">Critical</option>
-                            <option value="HIGH">High</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="LOW">Low</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ANOMALY ID</th>
-                                <th>ANOMALY TYPE</th>
-                                <th>SEVERITY</th>
-                                <th>SELLER / RECORD</th>
-                                <th>RECOMMENDATION</th>
-                                <th>DETECTED AT</th>
-                            </tr>
-                        </thead>
-                        <tbody id="anomaly-table">
-                            <tr>
-                                <td colspan="6" class="empty-state">Loading anomalies...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="result-count" class="result-count"></div>
-            </section>
-
-            <footer>
-                MarketGuard · Marketplace Risk & Compliance Intelligence
-                <span>Powered by FastAPI and PostgreSQL</span>
-            </footer>
-
-        </main>
-    </div>
-
-    <div id="toast" class="toast"></div>
-
-    <script src="js/app.js"></script>
+  <script src="/js/app.js"></script>
 </body>
 </html>
