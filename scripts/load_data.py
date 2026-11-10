@@ -182,9 +182,16 @@ def load_data(replace=False):
         if replace:
             print("Removing existing records...")
 
-            for table_name in reversed(LOAD_ORDER):
-                table = tables[table_name]
-                connection.execute(table.delete())
+            table_names = ", ".join(
+                f'"{tables[name].name}"'
+                for name in LOAD_ORDER
+            )
+
+            connection.exec_driver_sql(
+                f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"
+            )
+
+            print("Existing records removed successfully.")
 
         print("\nInserting records...")
 

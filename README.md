@@ -8,20 +8,30 @@ It monitors seller operations, product listings, order fulfillment, disputes, co
 
 ## Project Status
 
-The starter implementation is functional and includes:
+MarketGuard has been implemented and tested against a full-scale synthetic marketplace dataset.
+
+The current implementation includes:
 
 - PostgreSQL database with 15 operational tables.
-- Deterministic synthetic data generation.
+- Deterministic synthetic data generation with starter and full scales.
 - Data validation and integrity checks.
-- Database loading with transaction and row-count verification.
+- Optimized database loading with transactional replacement and row-count verification.
 - Five rule-based anomaly detection scenarios.
 - REST API for anomaly scanning and summaries.
 - Interactive web dashboard.
-- Automated tests for anomaly detection and API health.
+- Separate evaluation ground truth and record-level anomaly fixtures.
+- Automated tests covering all five anomaly detection rules and API health.
+- Reproducibility manifests and SHA-256 checksums.
 
-**Current starter dataset:** 11,678 operational records.
+**Current full-scale dataset:** 1,941,502 operational records across 15 tables.
 
-**Current dashboard result:** 7 detected anomalies, all classified as high severity and associated with suspended sellers having active listings.
+**Current dashboard result:** 301 detected anomalies, all classified as HIGH severity and associated with suspended sellers having active listings.
+
+The other four anomaly rules are covered by isolated automated tests but do not currently produce findings in the full-scale operational dataset.
+
+**Current data validation:** PASS — zero errors and one expected warning for the 301 intentionally seeded suspended-seller active-listing anomalies.
+
+**Automated tests:** 6 passed.
 
 ## Technology Stack
 
@@ -62,6 +72,9 @@ marketguard/
 │   ├── ground_truth/
 │   └── manifests/
 ├── docs/
+│   ├── architecture.md
+│   ├── data_dictionary.md
+│   └── business_rules.md
 ├── frontend/
 │   ├── index.html
 │   ├── css/
@@ -91,7 +104,7 @@ marketguard/
 ### 1. Clone the repository
 
 ```powershell
-git clone <YOUR_PUBLIC_GITHUB_REPOSITORY_URL>
+git clone https://github.com/nagubandichaitanya/marketguard.git
 cd marketguard
 ```
 
@@ -133,14 +146,12 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=YOUR_POSTGRES_PASSWORD
 
 DATA_SEED=20261022
-DATA_SCALE=starter
+DATA_SCALE=full
 ```
 
 **Security:** Never commit `.env` or expose database credentials publicly.
 
 ### 5. Create the PostgreSQL database
-
-Create the database using PostgreSQL:
 
 ```powershell
 psql -U postgres -h localhost -p 5432 -c "CREATE DATABASE marketguard_db;"
@@ -150,7 +161,7 @@ If the database already exists, do not execute this command again.
 
 ### 6. Initialize database tables
 
-From the project root:
+Run from the project root:
 
 ```powershell
 python -c "from backend.app.database import Base, engine; import backend.app.models; Base.metadata.create_all(bind=engine); print('Database tables created successfully')"
@@ -158,13 +169,42 @@ python -c "from backend.app.database import Base, engine; import backend.app.mod
 
 ### 7. Generate synthetic data
 
-Generate the starter dataset with a fixed seed:
+**Starter dataset:**
 
 ```powershell
 python -m scripts.generate_data --scale starter --seed 20261022
 ```
 
-The generator creates operational CSV files, separate ground-truth fixtures, and a generation manifest with reproducibility checksums.
+**Full-scale challenge dataset:**
+
+```powershell
+python -m scripts.generate_data --scale full --seed 20261022
+```
+
+The full-scale configuration generates:
+
+| Entity | Records |
+|---|---:|
+| Sellers | 2,000 |
+| Product listings | 20,000 |
+| Orders | 100,000 |
+| Order lines | 200,122 |
+| Order sellers | 200,059 |
+| Fulfillments | 200,122 |
+| Customer reviews | 57,034 |
+| Disputes | 11,983 |
+| Commission rules | 2,000 |
+| Payouts | 2,000 |
+| Payout lines | 155,407 |
+| Seller status history | 841 |
+| Fulfillment events | 964,401 |
+| Dispute events | 21,533 |
+| Payout events | 4,000 |
+| **Total operational records** | **1,941,502** |
+
+The generator also creates five ground-truth labels and five record-level evaluation fixtures. These are maintained separately from operational data.
+
+Generated data includes operational CSV files, evaluation fixtures, a generation manifest, and SHA-256 checksums.
 
 ### 8. Validate generated data
 
@@ -172,19 +212,35 @@ The generator creates operational CSV files, separate ground-truth fixtures, and
 python -m scripts.validate_data
 ```
 
-The validation process checks data integrity, relationships, arithmetic rules, lifecycle constraints, and anomaly fixture coverage.
+The validation process checks:
 
-A warning about active listings belonging to suspended sellers is expected in the starter evaluation dataset.
+- Record counts and primary-key uniqueness.
+- Foreign-key relationships.
+- Data integrity and arithmetic rules.
+- Lifecycle constraints and timestamps.
+- Ground-truth and evaluation fixture coverage.
+
+A warning about active listings belonging to suspended sellers is expected because these anomalies are intentionally seeded for evaluation.
 
 ### 9. Load data into PostgreSQL
+
+For an empty database:
 
 ```powershell
 python -m scripts.load_data
 ```
 
+To replace existing operational records with the newly generated dataset:
+
+```powershell
+python -m scripts.load_data --replace
+```
+
 The loader checks CSV schemas, converts data types, inserts records in dependency order, and verifies database row counts.
 
-Do not rerun the loader against an already populated database without understanding the `--replace` option.
+Database replacement uses a transaction, so a failed load does not leave a partially replaced dataset.
+
+**Important:** The loader does not load evaluation-only ground-truth fixtures into operational tables. Use `--replace` only when you intentionally want to replace the existing operational dataset.
 
 ## Running the Application
 
@@ -205,7 +261,7 @@ Open these URLs:
 
 ## Anomaly Detection Engine
 
-MarketGuard implements five rule-based anomaly scenarios.
+MarketGuard implements five rule-based anomaly detection scenarios.
 
 | ID | Anomaly | Detection objective |
 |---|---|---|
@@ -219,17 +275,17 @@ The detector evaluates operational database records. Evaluation-only ground-trut
 
 ## API Endpoints
 
-### 1. Health Check
+### Health Check
 
 `GET /health`
 
 Checks whether the application is running.
 
-### 2. Run Anomaly Scan
+### Run Anomaly Scan
 
 `POST /api/v1/anomalies/scan`
 
-Executes all implemented anomaly detection rules and returns:
+Executes the implemented anomaly detection rules and returns:
 
 - Total anomalies.
 - Severity counts.
@@ -239,7 +295,7 @@ Executes all implemented anomaly detection rules and returns:
 - Recommended actions.
 - Detection timestamps.
 
-### 3. Anomaly Summary
+### Anomaly Summary
 
 `GET /api/v1/anomalies/summary`
 
@@ -257,7 +313,7 @@ Returns aggregate anomaly counts by severity and type.
 
 ## Testing
 
-Run the complete automated test suite:
+Run the automated test suite:
 
 ```powershell
 python -m pytest -v
@@ -265,14 +321,16 @@ python -m pytest -v
 
 The current test suite contains six passing tests:
 
-- Payout-before-delivery detection.
-- Duplicate-commission detection.
-- Suspended-seller active-listing detection.
-- Lost-dispute deduction detection.
-- Payout-header mismatch detection.
-- FastAPI health endpoint.
+1. Payout-before-delivery detection.
+2. Duplicate-commission detection.
+3. Suspended-seller active-listing detection.
+4. Lost-dispute deduction detection.
+5. Payout-header mismatch detection.
+6. FastAPI health endpoint.
 
 The anomaly tests use an isolated SQLite test database and do not modify the PostgreSQL operational dataset.
+
+**Latest test result:** 6 passed.
 
 ## Data Integrity and Reproducibility
 
@@ -284,20 +342,40 @@ The project follows these principles:
 - Keep evaluation ground truth separate from operational input data.
 - Validate primary keys, foreign keys, enums, timestamps, and financial calculations.
 - Use deterministic seeds for repeatable synthetic datasets.
-- Generate checksums for reproducibility verification.
+- Generate SHA-256 checksums for reproducibility verification.
+- Index frequently queried foreign-key relationships.
+- Use transactional database loading.
 - Avoid real customer personal information in synthetic data.
 
 ## Current Validation Results
 
-- Operational tables: 15
-- Operational database records: 11,678
-- Ground-truth anomaly scenarios: 5
-- Automated tests: 6 passed
-- Current detected anomalies: 7
-- Current detected anomaly category: Suspended seller active listing
-- Validation status: PASS
+The following results were verified against the full-scale PostgreSQL dataset.
 
-These results describe the current starter dataset and implementation.
+| Metric | Verified result |
+|---|---:|
+| Operational database tables | 15 |
+| Operational database records | 1,941,502 |
+| Ground-truth labels | 5 |
+| Record-level evaluation fixtures | 5 |
+| Data validation status | PASS |
+| Validation errors | 0 |
+| Expected validation warnings | 1 |
+| Automated tests | 6 passed |
+| Detected anomalies | 301 |
+| HIGH-severity anomalies | 301 |
+| Detected anomaly category | Suspended seller active listing |
+
+The single validation warning is expected: 301 active product listings belong to suspended sellers. These are intentionally seeded evaluation anomalies.
+
+All five anomaly detection rules passed their isolated automated tests. Only the suspended-seller active-listing rule currently produces findings in the full-scale operational dataset.
+
+## Documentation
+
+Additional project documentation:
+
+- `docs/architecture.md` — System architecture, components, and data flow.
+- `docs/data_dictionary.md` — Database entities, fields, constraints, and relationships.
+- `docs/business_rules.md` — Five anomaly detection rules and financial policies.
 
 ## Future Improvements
 

@@ -590,8 +590,10 @@ def generate(scale="starter", seed=SEED):
                         "Could be improved",
                     ]),
                     "created_at": iso(
-                        delivered_at
-                        + timedelta(days=rng.randint(1, 7))
+                        min(
+                            delivered_at + timedelta(days=rng.randint(1, 7)),
+                            NOW
+                        )
                     ),
                 })
 

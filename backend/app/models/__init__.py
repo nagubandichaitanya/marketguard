@@ -399,7 +399,7 @@ class FulfillmentEvent(Base):
 
     event_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     fulfillment_id: Mapped[str] = mapped_column(
-        ForeignKey("fulfillments.fulfillment_id"), nullable=False
+        ForeignKey("fulfillments.fulfillment_id"), nullable=False, index=True
     )
     old_status: Mapped[str | None] = mapped_column(String(25))
     new_status: Mapped[str] = mapped_column(String(25), nullable=False)

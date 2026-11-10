@@ -232,6 +232,7 @@ def validate():
     order_by_id = {r["order_id"]: r for r in orders}
     line_by_id = {r["order_line_id"]: r for r in lines}
     fulfillment_by_line = {r["order_line_id"]: r for r in fulfillments}
+    fulfillment_by_id = {r["fulfillment_id"]: r for r in fulfillments}
     payout_by_id = {r["payout_id"]: r for r in payouts}
 
     # 3. Foreign key checks
@@ -362,18 +363,23 @@ def validate():
         "RETURNED": "RETURNED",
     }
 
+    # Build an order-to-fulfillments index for efficient validation.
+    fulfillments_by_order = defaultdict(list)
+
+    for fulfillment in fulfillments:
+        line = line_by_id.get(fulfillment["order_line_id"])
+
+        if line:
+            fulfillments_by_order[line["order_id"]].append(fulfillment)
+
+    # Verify order status against its fulfillment statuses.
     for order in orders:
         expected = expected_fulfillment_status.get(order["status"])
+
         if expected is None:
             continue
 
-        order_fulfillments = [
-            f for f in fulfillments
-            if line_by_id.get(f["order_line_id"], {}).get("order_id")
-            == order["order_id"]
-        ]
-
-        for fulfillment in order_fulfillments:
+        for fulfillment in fulfillments_by_order.get(order["order_id"], []):
             if fulfillment["status"] != expected:
                 error(
                     f"orders/fulfillments: Status mismatch for "
@@ -419,10 +425,7 @@ def validate():
             previous_time = event_time
             previous_status = event["new_status"]
 
-        fulfillment = next(
-            (f for f in fulfillments if f["fulfillment_id"] == fulfillment_id),
-            None,
-        )
+        fulfillment = fulfillment_by_id.get(fulfillment_id)
         if fulfillment and previous_status != fulfillment["status"]:
             error(f"fulfillment_events: Final event status mismatch for {fulfillment_id}")
 
