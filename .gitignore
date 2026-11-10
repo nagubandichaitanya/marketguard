@@ -1,0 +1,32 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets and local configuration
+.env
+*.pem
+*.key
+
+# IDE / OS
+.vscode/
+.idea/
+.cursor/
+.DS_Store
+Thumbs.db
+
+# Generated data (keep directory placeholders)
+data/generated/*
+!data/generated/.gitkeep
+data/ground_truth/*
+!data/ground_truth/.gitkeep
+data/manifests/*
+!data/manifests/.gitkeep
+
+# Logs
+*.log

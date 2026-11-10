@@ -1,0 +1,2 @@
+-- MarketGuard PostgreSQL schema will be implemented after the data dictionary.
+-- Do not run this placeholder as a production schema.
