@@ -1,31 +1,41 @@
-"""Database engine/session setup will be completed in the PostgreSQL checkpoint."""
-
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from backend.app.config import settings
 
 
-def build_database_url() -> str:
-    return (
-        f"postgresql+psycopg://{settings.postgres_user}:"
-        f"{settings.postgres_password}@{settings.postgres_host}:"
-        f"{settings.postgres_port}/{settings.postgres_db}"
-    )
+database_url = URL.create(
+    drivername="postgresql+psycopg",
+    username=settings.postgres_user,
+    password=settings.postgres_password,
+    host=settings.postgres_host,
+    port=settings.postgres_port,
+    database=settings.postgres_db,
+)
+
+engine = create_engine(database_url, pool_pre_ping=True)
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+)
 
 
 class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(build_database_url(), pool_pre_ping=True)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-
 def get_db():
-    """FastAPI dependency; callers should close the yielded session."""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+def test_connection():
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT version();"))
+        return result.scalar()
